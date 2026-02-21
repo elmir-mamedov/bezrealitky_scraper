@@ -10,7 +10,9 @@ async def fetch_xml(url: str) -> bytes:
 
 
 def parse_sitemap(xml_bytes: bytes):
-    root = etree.parse(BytesIO(xml_bytes)).getroot()
+    # Use recover=True so lxml can handle broken characters like & in URLs
+    parser = etree.XMLParser(recover=True)
+    root = etree.parse(BytesIO(xml_bytes), parser=parser).getroot()
 
     ns = {"ns": root.nsmap.get(None)} if None in root.nsmap else {}
 
