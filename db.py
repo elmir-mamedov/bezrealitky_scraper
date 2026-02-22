@@ -31,6 +31,7 @@ def init_db():
     print("Database initialized ✅")
 
 # Insert a new listing
+'''Stores all scraped property listings (URL, title, price, location, description, etc.).'''
 def insert_listing(url, title=None, price=None, location=None, posted_date=None, description=None):
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -74,7 +75,7 @@ def get_unprocessed_urls(limit=50):
                 """,
                 (limit,)
             )
-            urls = [row[0] for row in cur.fetchall()]
+            urls = [row['url'] for row in cur.fetchall()]
     return urls
 
 
