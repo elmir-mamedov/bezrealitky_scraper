@@ -1,5 +1,5 @@
 import os
-import psycopg
+import psycopg # popular PostgreSQL adapter for the Python.
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
 
@@ -20,7 +20,8 @@ def init_db():
                 id SERIAL PRIMARY KEY,
                 url TEXT UNIQUE NOT NULL,
                 title TEXT,
-                price NUMERIC,
+                price INTEGER,
+                currency TEXT,
                 location TEXT,
                 posted_date DATE,
                 description TEXT,
@@ -32,15 +33,15 @@ def init_db():
 
 # Insert a new listing
 '''Stores all scraped property listings (URL, title, price, location, description, etc.).'''
-def insert_listing(url, title=None, price=None, location=None, posted_date=None, description=None):
+def insert_listing(url, title=None, price=None, currency=None, location=None, posted_date=None, description=None):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-            INSERT INTO listings (url, title, price, location, posted_date, description)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO listings (url, title, price, currency, location, posted_date, description)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (url) DO NOTHING
             RETURNING id;
-            """, (url, title, price, location, posted_date, description))
+            """, (url, title, price, currency, location, posted_date, description))
             listing_id = cur.fetchone()
             conn.commit()
             return listing_id

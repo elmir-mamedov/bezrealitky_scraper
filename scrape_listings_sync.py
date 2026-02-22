@@ -2,8 +2,9 @@
 import httpx
 from lxml import html
 from db import get_unprocessed_urls, insert_listing, mark_url_processed
+import re
 
-BATCH_SIZE = 10  # number of URLs to process per run
+BATCH_SIZE = 500  # number of URLs to process per run
 
 def scrape_listing(url):
     try:
@@ -19,7 +20,27 @@ def scrape_listing(url):
         # Price
         price_xpath = '//div[contains(@class,"justify-content-between")]//strong[contains(@class,"h4 fw-bold")]//span/text()'
         price = tree.xpath(price_xpath)
-        price_clean = price[0].replace("\xa0","").replace("Kč","").strip() if price else None
+
+        price_clean = None
+        currency = None
+
+        if price:
+            raw_price = price[0].strip()
+
+            # Detect currency
+            if "€" in raw_price:
+                currency = "EUR"
+            elif "Kč" in raw_price:
+                currency = "CZK"
+            elif "$" in raw_price:
+                currency = "USD"
+            else:
+                currency = "UNKNOWN"
+
+            # Extract only digits
+            digits = re.sub(r"[^\d]", "", raw_price)
+            if digits:
+                price_clean = int(digits)
 
         # Location
         location = tree.xpath('//h1/span[contains(@class,"text-grey-dark")]/text()')
@@ -34,6 +55,7 @@ def scrape_listing(url):
             url=url,
             title=title,
             price=price_clean,
+            currency=currency,
             location=location_clean,
             posted_date=None,  # you can later extract this if needed
             description=description_clean
@@ -63,6 +85,8 @@ def main():
         return
 
     for i, url in enumerate(urls, 1):
+        if not url.startswith("https://www.bezrealitky.cz/nemovitosti-"):
+            continue  # skip non-listings
         scrape_listing(url)
         processed = i
         remaining = len(urls) - i
