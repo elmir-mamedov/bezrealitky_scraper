@@ -23,9 +23,29 @@ def init_db():
                 price INTEGER,
                 currency TEXT,
                 location TEXT,
-                posted_date DATE,
                 description_en TEXT,
                 description_native TEXT,
+            
+                construction_of_building TEXT,
+                condition TEXT,
+                equipped TEXT,
+                area_of_property TEXT,
+                usable_area TEXT,
+                floor TEXT,
+                disposition TEXT,
+                ownership TEXT,
+                city_location TEXT,
+                age TEXT,
+            
+                garage BOOLEAN,
+                elevator BOOLEAN,
+                balcony BOOLEAN,
+                parking BOOLEAN,
+                barrier_free_access BOOLEAN,
+                cellar BOOLEAN,
+                near_public_transport BOOLEAN,
+                terrace BOOLEAN,
+            
                 created_at TIMESTAMP DEFAULT NOW()
             );
             """)
@@ -47,15 +67,42 @@ def init_db():
 
 # Insert a new listing
 '''Stores all scraped property listings (URL, title, price, location, description, etc.).'''
-def insert_listing(url, title=None, price=None, currency=None, location=None, posted_date=None, description_en=None, description_native=None):
+def insert_listing(url, title=None, price=None, currency=None, location=None,
+                   description_en=None,
+                   description_native=None,
+                   construction_of_building=None,
+                   condition=None,
+                   equipped=None,
+                   area_of_property=None,
+                   usable_area=None,
+                   floor=None,
+                   disposition=None,
+                   ownership=None,
+                   city_location=None,
+                   age=None,
+                   garage=None,
+                   elevator=None,
+                   balcony=None,
+                   parking=None,
+                   barrier_free_access=None,
+                   cellar=None,
+                   near_public_transport=None,
+                   terrace=None,
+                   ):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-            INSERT INTO listings (url, title, price, currency, location, posted_date, description_en, description_native)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO listings (url, title, price, currency, location, description_en, description_native,\
+            construction_of_building, condition, equipped, area_of_property, usable_area, floor, disposition, \
+            ownership, city_location, age, garage, elevator, balcony, parking, barrier_free_access, cellar, \
+            near_public_transport, terrace)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (url) DO NOTHING
             RETURNING id;
-            """, (url, title, price, currency, location, posted_date, description_en, description_native))
+            """, (url, title, price, currency, location, description_en, description_native,
+            construction_of_building, condition, equipped, area_of_property, usable_area, floor, disposition,
+            ownership, city_location, age, garage, elevator, balcony, parking, barrier_free_access, cellar,
+            near_public_transport, terrace))
             listing_id = cur.fetchone()
             conn.commit()
             return listing_id

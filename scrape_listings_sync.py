@@ -4,7 +4,7 @@ from lxml import html
 from db import get_unprocessed_urls, insert_listing, mark_url_processed
 import re
 
-BATCH_SIZE = 2000  # number of URLs to process per run
+BATCH_SIZE = 8000  # number of URLs to process per run
 
 def scrape_listing(url):
     try:
@@ -64,6 +64,58 @@ def scrape_listing(url):
             d.strip() for d in description_parts_native if d.strip()
         )
 
+        # ---- Key-Value Table Details ----
+        rows = tree.xpath('//table//tr')
+        details = {}
+
+        for row in rows:
+            key_parts = row.xpath('.//th//span//text()')
+            value_parts = row.xpath('.//td//span//text()')
+
+            if key_parts and value_parts:
+                key = key_parts[0].strip()
+                value = " ".join(v.strip() for v in value_parts if v.strip())
+                details[key] = value
+
+        # Normalize keys to lowercase for safe access
+        normalized_details = {k.strip().lower(): v for k, v in details.items()}
+
+        construction_of_building = normalized_details.get("konstrukce budovy")
+        condition = normalized_details.get("stav")
+        equipped = normalized_details.get("vybaveno")
+        area_of_property = normalized_details.get("plocha pozemnku")
+        usable_area = normalized_details.get("užitná plocha")
+        floor = normalized_details.get("podlaží")
+        disposition = normalized_details.get("dispozice")
+        ownership = normalized_details.get("vlastnictví")
+        city_location = normalized_details.get("umístění")
+        age = normalized_details.get("stáří")
+
+        # --- Boolean features based on icons/text ---
+        boolean_features = {
+            "garage": "Garáž",
+            "elevator": "Výtah",
+            "balcony": "Balkon",  # example
+            "parking": "Parkování",
+            "barrier-free_access": "Bezbariérový přístup",
+            "cellar": "Sklep",
+            "near_public_transport": "MHD",
+            "terrace": "Terasa",
+        }
+
+        # Container of icon-based rows
+        icon_rows = tree.xpath('//div[contains(@class,"ParamsTable_paramsTable")]//tr')
+
+        # Initialize dictionary
+        features_dict = {key: False for key in boolean_features}
+
+        for row in icon_rows:
+            # Check all text inside row
+            text_in_row = " ".join(row.xpath('.//span/text()')).strip()
+            for key, label in boolean_features.items():
+                if label in text_in_row:
+                    features_dict[key] = True
+
         # Insert into DB
         insert_listing(
             url=url,
@@ -71,9 +123,27 @@ def scrape_listing(url):
             price=price_clean,
             currency=currency,
             location=location_clean,
-            posted_date=None,  # you can later extract this if needed
             description_en=description_clean_en,
-            description_native = description_clean_native
+            description_native = description_clean_native,
+            construction_of_building=construction_of_building,
+            condition=condition,
+            equipped=equipped,
+            area_of_property=area_of_property,
+            usable_area=usable_area,
+            floor=floor,
+            disposition=disposition,
+            ownership=ownership,
+            city_location=city_location,
+            age=age,
+            garage=features_dict["garage"],
+            elevator=features_dict["elevator"],
+            balcony=features_dict["balcony"],
+            parking=features_dict["parking"],
+            barrier_free_access=features_dict["barrier-free_access"],
+            cellar=features_dict["cellar"],
+            near_public_transport=features_dict["near_public_transport"],
+            terrace=features_dict["terrace"],
+
         )
         mark_url_processed(url)
         print("Scraped ✅", url)
